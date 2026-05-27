@@ -33,7 +33,7 @@ android {
         register("development") {
             applicationIdSuffix = ".dev"
             isDebuggable = true
-            resValue("string", "app_name", "Gotify DEV")
+            resValue("string", "app_name", "Gotify-zxqh")
         }
     }
     buildFeatures {
