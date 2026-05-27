@@ -114,6 +114,8 @@ internal class WebSocketConnection(
 
     @Synchronized
     fun close() {
+        val closedId = ID.get()
+        ID.incrementAndGet()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             alarmManagerCallback?.run(alarmManager::cancel)
             alarmManagerCallback = null
@@ -124,7 +126,7 @@ internal class WebSocketConnection(
         if (webSocket != null) {
             webSocket?.close(1000, "")
             closed()
-            Logger.info("WebSocket(${ID.get()}): closing existing connection.")
+            Logger.info("WebSocket($closedId): closing existing connection.")
         }
     }
 
