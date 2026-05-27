@@ -53,11 +53,15 @@
 
     <PreferenceCategory app:title="@string/setting_connection">
         <EditTextPreference
-            android:defaultValue="60"
+            android:defaultValue="15"
             android:inputType="numberSigned"
             android:key="@string/setting_key_reconnect_delay"
             android:title="@string/setting_reconnect_delay"
             android:summary="@string/setting_reconnect_interval_summary" />
+        <SwitchPreferenceCompat
+            android:key="@string/setting_key_battery_optimization"
+            android:title="@string/setting_battery_optimization"
+            android:summary="@string/setting_summary_battery_optimization" />
         <SwitchPreferenceCompat
             android:key="@string/setting_key_exponential_backoff"
             android:title="@string/setting_exponential_backoff_title"

@@ -43,7 +43,6 @@ import io.noties.markwon.Markwon
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -136,7 +135,7 @@ internal class WebSocketService : Service() {
             sharedPreferences.getString(
                 getString(R.string.setting_key_reconnect_delay),
                 null
-            )?.toIntOrNull()?.toDuration(DurationUnit.SECONDS) ?: 1.minutes
+            )?.toIntOrNull()?.toDuration(DurationUnit.SECONDS) ?: 15.seconds
 
         val exponentialBackoff = sharedPreferences.getBoolean(
             getString(R.string.setting_key_exponential_backoff),
@@ -191,6 +190,7 @@ internal class WebSocketService : Service() {
             }
 
             runtime.connection = WebSocketConnection(
+                account.label,
                 account.url,
                 account.sslSettings(),
                 account.token,

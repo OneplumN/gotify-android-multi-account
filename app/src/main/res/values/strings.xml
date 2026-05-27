@@ -129,6 +129,10 @@
     <string name="setting_key_reconnect_delay">reconnect_delay</string>
     <string name="setting_connection">Connection</string>
     <string name="setting_reconnect_interval_summary">Delay between reconnect attempts</string>
+    <string name="setting_battery_optimization">Disable battery optimization</string>
+    <string name="setting_key_battery_optimization">battery_optimization</string>
+    <string name="setting_summary_battery_optimization">Recommended for reliable background WebSocket notifications.</string>
+    <string name="setting_summary_battery_optimization_granted">Battery optimization is disabled for zgotify.</string>
     <string name="setting_exponential_backoff_title">Exponential Backoff</string>
     <string name="setting_exponential_backoff_summary">Exponentially increase the reconnect delay for each reconnect attempt</string>
     <string name="setting_key_exponential_backoff">reconnect_exponential_backoff</string>

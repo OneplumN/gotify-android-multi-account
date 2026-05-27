@@ -5,10 +5,12 @@ import android.app.AlarmManager.OnAlarmListener
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import com.github.gotify.SSLSettings
 import com.github.gotify.Utils
 import com.github.gotify.api.CertUtils
 import com.github.gotify.client.model.Message
+import java.net.SocketException
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
@@ -25,6 +27,7 @@ import okhttp3.WebSocketListener
 import org.tinylog.kotlin.Logger
 
 internal class WebSocketConnection(
+    private val diagnosticName: String,
     private val baseUrl: String,
     settings: SSLSettings,
     private val token: String?,
@@ -38,6 +41,7 @@ internal class WebSocketConnection(
     private val idCounter = AtomicLong(0)
     private val reconnectHandler = Handler(Looper.getMainLooper())
     private var errorCount = 0
+    private var openedAtElapsed: Long = 0L
 
     private var webSocket: WebSocket? = null
     private lateinit var onMessageCallback: (Message) -> Unit
@@ -50,7 +54,7 @@ internal class WebSocketConnection(
     init {
         val builder = OkHttpClient.Builder()
             .readTimeout(0, TimeUnit.MILLISECONDS)
-            .pingInterval(1, TimeUnit.MINUTES)
+            .pingInterval(20, TimeUnit.SECONDS)
             .connectTimeout(10, TimeUnit.SECONDS)
         CertUtils.applySslSettings(builder, settings)
         client = builder.build()
@@ -103,7 +107,8 @@ internal class WebSocketConnection(
         close()
         state = State.Connecting
         val nextId = idCounter.incrementAndGet()
-        Logger.info("WebSocket($nextId): starting...")
+        openedAtElapsed = 0L
+        Logger.info("${logPrefix(nextId)}: starting to $baseUrl")
 
         webSocket = client.newWebSocket(request(), Listener(nextId))
         return this
@@ -123,7 +128,7 @@ internal class WebSocketConnection(
         if (webSocket != null) {
             webSocket?.close(1000, "")
             closed()
-            Logger.info("WebSocket($closedId): closing existing connection.")
+            Logger.info("${logPrefix(closedId)}: closing existing connection.")
         }
     }
 
@@ -143,7 +148,7 @@ internal class WebSocketConnection(
         state = State.Scheduled
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            Logger.info("WebSocket: scheduling a restart in $scheduleIn (via alarm manager)")
+            Logger.info("${logPrefix(id)}: scheduling a restart in $scheduleIn (via alarm manager)")
             val future = Calendar.getInstance()
             future.add(Calendar.SECOND, scheduleIn.inWholeSeconds.toInt())
 
@@ -158,7 +163,7 @@ internal class WebSocketConnection(
                 null
             )
         } else {
-            Logger.info("WebSocket: scheduling a restart in $scheduleIn")
+            Logger.info("${logPrefix(id)}: scheduling a restart in $scheduleIn")
             handlerCallback?.run(reconnectHandler::removeCallbacks)
             val cb = Runnable { syncExec(id) { start() } }
             handlerCallback = cb
@@ -170,7 +175,8 @@ internal class WebSocketConnection(
         override fun onOpen(webSocket: WebSocket, response: Response) {
             syncExec(id) {
                 state = State.Connected
-                Logger.info("WebSocket($id): opened")
+                openedAtElapsed = SystemClock.elapsedRealtime()
+                Logger.info("${logPrefix(id)}: opened")
                 onOpen.run()
 
                 if (errorCount > 0) {
@@ -183,7 +189,7 @@ internal class WebSocketConnection(
 
         override fun onMessage(webSocket: WebSocket, text: String) {
             syncExec(id) {
-                Logger.info("WebSocket($id): received message $text")
+                Logger.info("${logPrefix(id)}: received message after ${connectedFor()} $text")
                 val message = Utils.JSON.fromJson(text, Message::class.java)
                 onMessageCallback(message)
             }
@@ -193,7 +199,10 @@ internal class WebSocketConnection(
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
             syncExec(id) {
                 if (state == State.Connected) {
-                    Logger.warn("WebSocket($id): closed")
+                    Logger.warn(
+                        "${logPrefix(id)}: closed after ${connectedFor()} " +
+                            "code=$code reason=$reason"
+                    )
                     onClose.run()
                 }
                 closed()
@@ -202,10 +211,17 @@ internal class WebSocketConnection(
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            val code = if (response != null) "StatusCode: ${response.code}" else ""
-            val message = response?.message ?: ""
-            Logger.error(t) { "WebSocket($id): failure $code Message: $message" }
             syncExec(id) {
+                val code = if (response != null) " statusCode=${response.code}" else ""
+                val responseMessage = response?.message ?: ""
+                val failureMessage =
+                    "${logPrefix(id)}: failure after ${connectedFor()}$code " +
+                        "${t.javaClass.simpleName}: ${t.message.orEmpty()} Message: $responseMessage"
+                if (t is SocketException) {
+                    Logger.warn(failureMessage)
+                } else {
+                    Logger.error(t) { failureMessage }
+                }
                 closed()
 
                 errorCount++
@@ -229,6 +245,16 @@ internal class WebSocketConnection(
             runnable()
         }
     }
+
+    private fun connectedFor(): String {
+        if (openedAtElapsed == 0L) {
+            return "not-opened"
+        }
+        val seconds = (SystemClock.elapsedRealtime() - openedAtElapsed) / 1000
+        return "${seconds}s"
+    }
+
+    private fun logPrefix(id: Long): String = "WebSocket[$diagnosticName]($id)"
 
     internal fun interface OnNetworkFailureRunnable {
         fun execute(status: String, reconnectIn: Duration)

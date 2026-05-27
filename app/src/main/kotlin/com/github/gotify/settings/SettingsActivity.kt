@@ -1,12 +1,14 @@
 package com.github.gotify.settings
 
 import android.app.Dialog
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.view.MenuItem
 import android.view.View
@@ -79,7 +81,7 @@ internal class SettingsActivity :
                 getString(R.string.setting_key_reconnect_delay)
             )?.onPreferenceChangeListener =
                 Preference.OnPreferenceChangeListener { _, newValue ->
-                    val value = (newValue as String).trim().toIntOrNull() ?: 60
+                    val value = (newValue as String).trim().toIntOrNull() ?: 15
                     if (value !in 5..1200) {
                         Utils.showSnackBar(
                             requireActivity(),
@@ -138,7 +140,15 @@ internal class SettingsActivity :
                     openSystemAlertWindowPermissionPage()
                 }
             }
+            findPreference<SwitchPreferenceCompat>(
+                getString(R.string.setting_key_battery_optimization)
+            )?.let {
+                it.setOnPreferenceChangeListener { _, _ ->
+                    openBatteryOptimizationPage()
+                }
+            }
             checkSystemAlertWindowPermission()
+            checkBatteryOptimization()
         }
 
         override fun onDisplayPreferenceDialog(preference: Preference) {
@@ -152,6 +162,7 @@ internal class SettingsActivity :
         override fun onResume() {
             super.onResume()
             checkSystemAlertWindowPermission()
+            checkBatteryOptimization()
         }
 
         private fun openSystemAlertWindowPermissionPage(): Boolean {
@@ -174,6 +185,40 @@ internal class SettingsActivity :
                     getString(R.string.setting_summary_intent_dialog_permission_granted)
                 } else {
                     getString(R.string.setting_summary_intent_dialog_permission)
+                }
+            }
+        }
+
+        private fun openBatteryOptimizationPage(): Boolean {
+            val context = requireContext()
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!powerManager.isIgnoringBatteryOptimizations(context.packageName)) {
+                Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    "package:${context.packageName}".toUri()
+                ).apply {
+                    startActivity(this)
+                }
+            } else {
+                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                    startActivity(this)
+                }
+            }
+            return true
+        }
+
+        private fun checkBatteryOptimization() {
+            findPreference<SwitchPreferenceCompat>(
+                getString(R.string.setting_key_battery_optimization)
+            )?.let {
+                val context = requireContext()
+                val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+                val ignoring = powerManager.isIgnoringBatteryOptimizations(context.packageName)
+                it.isChecked = ignoring
+                it.summary = if (ignoring) {
+                    getString(R.string.setting_summary_battery_optimization_granted)
+                } else {
+                    getString(R.string.setting_summary_battery_optimization)
                 }
             }
         }
