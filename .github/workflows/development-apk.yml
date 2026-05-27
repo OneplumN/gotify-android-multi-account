@@ -53,6 +53,14 @@ jobs:
               fi
             done
 
+      - name: Remove current development release
+        if: github.ref == 'refs/tags/zgotify'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_TAG: ${{ github.ref_name }}
+        run: |
+          gh release delete "$CURRENT_TAG" --repo "$GITHUB_REPOSITORY" --yes || true
+
       - name: Remove previous development artifacts
         if: github.ref == 'refs/tags/zgotify'
         env:
