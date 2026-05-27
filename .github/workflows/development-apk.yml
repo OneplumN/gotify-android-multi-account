@@ -1,0 +1,46 @@
+name: Development APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/android-multi-account
+    tags:
+      - dev-*
+
+jobs:
+  build:
+    name: Build development APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build development APK
+        run: ./gradlew :app:assembleDevelopment --stacktrace
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/development/app-development.apk dist/Gotify-DEV-multi-account.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gotify-DEV-multi-account
+          path: dist/Gotify-DEV-multi-account.apk
+
+      - name: Publish prerelease
+        if: startsWith(github.ref, 'refs/tags/dev-')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          files: dist/Gotify-DEV-multi-account.apk
