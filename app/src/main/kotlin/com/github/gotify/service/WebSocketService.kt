@@ -26,6 +26,7 @@ import com.github.gotify.NotificationSupport
 import com.github.gotify.R
 import com.github.gotify.Settings
 import com.github.gotify.Utils
+import com.github.gotify.accounts.AccountStore
 import com.github.gotify.api.Callback
 import com.github.gotify.api.ClientFactory
 import com.github.gotify.client.api.ApplicationApi
@@ -60,12 +61,20 @@ internal class WebSocketService : Service() {
         object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 super.onAvailable(network)
+                if (!isAccountCurrent()) {
+                    stopSelf()
+                    return
+                }
                 Logger.info("WebSocket: Network available, reconnect if needed.")
                 connection?.start()
             }
 
             override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
                 super.onLinkPropertiesChanged(network, linkProperties)
+                if (!isAccountCurrent()) {
+                    stopSelf()
+                    return
+                }
                 Logger.info("WebSocket: Network properties changed, reconnect if needed.")
                 connection?.start()
             }
@@ -74,14 +83,13 @@ internal class WebSocketService : Service() {
 
     private val lastReceivedMessage = AtomicLong(NOT_LOADED)
     private lateinit var missingMessageUtil: MissedMessageUtil
+    private var activeAccountId: String? = null
 
     private lateinit var markwon: Markwon
 
     override fun onCreate() {
         super.onCreate()
         settings = Settings(this)
-        val client = ClientFactory.clientToken(settings)
-        missingMessageUtil = MissedMessageUtil(client.createService(MessageApi::class.java))
         Logger.info("Create ${javaClass.simpleName}")
         markwon = MarkwonFactory.createForNotification(this, CoilInstance.get(this))
     }
@@ -107,10 +115,23 @@ internal class WebSocketService : Service() {
 
     private fun startPushService() {
         UncaughtExceptionHandler.registerCurrentThread()
+        val account = AccountStore(this).active()
+        if (account == null) {
+            Logger.warn("WebSocket: No active account, stopping service.")
+            stopSelf()
+            return
+        }
+        activeAccountId = account.id
+        val client = ClientFactory.clientToken(settings)
+        missingMessageUtil = MissedMessageUtil(client.createService(MessageApi::class.java))
         showForegroundNotification(getString(R.string.websocket_init))
 
         if (lastReceivedMessage.get() == NOT_LOADED) {
-            missingMessageUtil.lastReceivedMessage { lastReceivedMessage.set(it) }
+            missingMessageUtil.lastReceivedMessage {
+                if (isAccountCurrent()) {
+                    lastReceivedMessage.set(it)
+                }
+            }
         }
 
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -148,12 +169,16 @@ internal class WebSocketService : Service() {
     }
 
     private fun fetchApps() {
+        val accountId = activeAccountId
         ClientFactory.clientToken(settings)
             .createService(ApplicationApi::class.java)
             .apps
             .enqueue(
                 Callback.call(
                     onSuccess = Callback.SuccessBody { apps ->
+                        if (!isAccountCurrent(accountId)) {
+                            return@SuccessBody
+                        }
                         appIdToApp.clear()
                         appIdToApp.putAll(apps.associateBy { it.id })
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -164,33 +189,48 @@ internal class WebSocketService : Service() {
                             )
                         }
                     },
-                    onError = { appIdToApp.clear() }
+                    onError = {
+                        if (isAccountCurrent(accountId)) {
+                            appIdToApp.clear()
+                        }
+                    }
                 )
             )
     }
 
     private fun onClose() {
+        if (!isAccountCurrent()) {
+            stopSelf()
+            return
+        }
         showForegroundNotification(
             getString(R.string.websocket_closed),
             getString(R.string.websocket_reconnect)
         )
+        val accountId = activeAccountId
         ClientFactory.userApiWithToken(settings)
             .currentUser()
             .enqueue(
                 Callback.call(
-                    onSuccess = { doReconnect() },
-                    onError = { exception ->
-                        if (exception.code == 401) {
-                            showForegroundNotification(
-                                getString(R.string.user_action),
-                                getString(R.string.websocket_closed_logout)
-                            )
-                        } else {
-                            Logger.info(
-                                "WebSocket closed but the user still authenticated, " +
-                                    "trying to reconnect"
-                            )
+                    onSuccess = {
+                        if (isAccountCurrent(accountId)) {
                             doReconnect()
+                        }
+                    },
+                    onError = { exception ->
+                        if (isAccountCurrent(accountId)) {
+                            if (exception.code == 401) {
+                                showForegroundNotification(
+                                    getString(R.string.user_action),
+                                    getString(R.string.websocket_closed_logout)
+                                )
+                            } else {
+                                Logger.info(
+                                    "WebSocket closed but the user still authenticated, " +
+                                        "trying to reconnect"
+                                )
+                                doReconnect()
+                            }
                         }
                     }
                 )
@@ -202,6 +242,10 @@ internal class WebSocketService : Service() {
     }
 
     private fun onFailure(status: String, reconnectIn: Duration) {
+        if (!isAccountCurrent()) {
+            stopSelf()
+            return
+        }
         val title = getString(R.string.websocket_error, status)
         showForegroundNotification(
             title,
@@ -210,10 +254,18 @@ internal class WebSocketService : Service() {
     }
 
     private fun onOpen() {
+        if (!isAccountCurrent()) {
+            stopSelf()
+            return
+        }
         showForegroundNotification(getString(R.string.websocket_listening))
     }
 
     private fun notifyMissedNotifications() {
+        if (!isAccountCurrent()) {
+            stopSelf()
+            return
+        }
         val messageId = lastReceivedMessage.get()
         if (messageId == NOT_LOADED) {
             return
@@ -231,6 +283,10 @@ internal class WebSocketService : Service() {
     }
 
     private fun onGroupedMessages(messages: List<Message>) {
+        if (!isAccountCurrent()) {
+            stopSelf()
+            return
+        }
         var highestPriority = 0L
         messages.forEach { message ->
             if (lastReceivedMessage.get() < message.id) {
@@ -250,6 +306,10 @@ internal class WebSocketService : Service() {
     }
 
     private fun onMessage(message: Message) {
+        if (!isAccountCurrent()) {
+            stopSelf()
+            return
+        }
         if (lastReceivedMessage.get() < message.id) {
             lastReceivedMessage.set(message.id)
         }
@@ -265,6 +325,10 @@ internal class WebSocketService : Service() {
     }
 
     private fun broadcast(message: Message) {
+        if (!isAccountCurrent()) {
+            stopSelf()
+            return
+        }
         val intent = Intent()
         intent.action = NEW_MESSAGE_BROADCAST
         intent.putExtra("message", Utils.JSON.toJson(message))
@@ -272,6 +336,10 @@ internal class WebSocketService : Service() {
     }
 
     override fun onBind(intent: Intent): IBinder? = null
+
+    private fun isAccountCurrent(accountId: String? = activeAccountId): Boolean {
+        return accountId != null && AccountStore(this).active()?.id == accountId
+    }
 
     private fun showForegroundNotification(title: String, message: String? = null) {
         val notificationIntent = Intent(this, MessagesActivity::class.java)

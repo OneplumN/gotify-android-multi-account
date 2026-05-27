@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.github.gotify.R
 import com.github.gotify.Settings
 import com.github.gotify.Utils.launchCoroutine
+import com.github.gotify.accounts.AccountStore
 import com.github.gotify.api.Api
 import com.github.gotify.api.ApiException
 import com.github.gotify.api.ClientFactory
@@ -41,6 +42,7 @@ internal class ShareActivity : AppCompatActivity() {
             actionBar.setDisplayShowCustomEnabled(true)
         }
         settings = Settings(this)
+        supportActionBar?.subtitle = AccountStore(this).active()?.label
 
         val intent = intent
         val type = intent.type
