@@ -20,7 +20,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
         signingConfig = signingConfigs.getByName("debug")
-        resValue("string", "app_name", "Gotify")
+        resValue("string", "app_name", "zgotify")
     }
     buildTypes {
         release {
@@ -33,7 +33,7 @@ android {
         register("development") {
             applicationIdSuffix = ".dev"
             isDebuggable = true
-            resValue("string", "app_name", "Gotify-zxqh")
+            resValue("string", "app_name", "zgotify")
         }
     }
     buildFeatures {

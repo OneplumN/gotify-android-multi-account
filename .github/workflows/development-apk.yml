@@ -31,13 +31,13 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/development/app-development.apk dist/Gotify-zxqh.apk
+          cp app/build/outputs/apk/development/app-development.apk dist/zgotify.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Gotify-zxqh
-          path: dist/Gotify-zxqh.apk
+          name: zgotify
+          path: dist/zgotify.apk
           retention-days: 1
 
       - name: Remove previous development releases
@@ -58,7 +58,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts" --paginate --jq '.artifacts[] | select(.name == "Gotify-zxqh" or .name == "Gotify-DEV-multi-account") | .id' |
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts" --paginate --jq '.artifacts[] | select(.name == "zgotify" or .name == "Gotify-zxqh" or .name == "Gotify-DEV-multi-account") | .id' |
             while read -r artifact_id; do
               gh api --method DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id" || true
             done
@@ -67,5 +67,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/dev-')
         uses: softprops/action-gh-release@v2
         with:
+          name: zgotify
           prerelease: true
-          files: dist/Gotify-zxqh.apk
+          files: dist/zgotify.apk
