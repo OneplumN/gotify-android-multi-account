@@ -21,7 +21,7 @@ internal class AccountStore(context: Context) {
 
     fun activeAccountId(): String? = preferences.getString(KEY_ACTIVE_ACCOUNT_ID, null)
 
-    fun save(account: GotifyAccount, makeActive: Boolean) {
+    fun save(account: GotifyAccount, makeActive: Boolean = false) {
         val accounts = all().toMutableList()
         val index = accounts.indexOfFirst { it.id == account.id }
         if (index == -1) {

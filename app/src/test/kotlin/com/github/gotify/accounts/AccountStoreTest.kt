@@ -2,6 +2,7 @@ package com.github.gotify.accounts
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.github.gotify.Settings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -118,6 +119,49 @@ class AccountStoreTest {
         assertEquals("/client.p12", account?.clientCertPath)
         assertEquals("secret", account?.clientCertPassword)
         assertEquals("alice @ gotify.example", account?.label)
+    }
+
+    @Test
+    fun settingsReadsActiveAccountValues() {
+        val account = AccountStore.createAccount(
+            url = "https://gotify.example",
+            token = "client-token",
+            username = "alice",
+            admin = true,
+            serverVersion = "2.10.0",
+            validateSSL = false,
+            caCertPath = "/ca.pem",
+            clientCertPath = "/client.p12",
+            clientCertPassword = "secret",
+            id = "active"
+        )
+        store.save(account, makeActive = true)
+
+        val settings = Settings(context)
+
+        assertEquals(true, settings.tokenExists())
+        assertEquals("https://gotify.example", settings.url)
+        assertEquals("client-token", settings.token)
+        assertEquals("alice", settings.user?.name)
+        assertEquals(true, settings.user?.admin)
+        assertEquals("2.10.0", settings.serverVersion)
+        assertEquals(false, settings.sslSettings().validateSSL)
+        assertEquals("/ca.pem", settings.sslSettings().caCertPath)
+        assertEquals("/client.p12", settings.sslSettings().clientCertPath)
+        assertEquals("secret", settings.sslSettings().clientCertPassword)
+    }
+
+    @Test
+    fun settingsClearRemovesOnlyActiveAccount() {
+        val first = account("one")
+        val second = account("two")
+        store.save(first, makeActive = true)
+        store.save(second, makeActive = false)
+
+        Settings(context).clear()
+
+        assertEquals(listOf(second), store.all())
+        assertEquals(second, store.active())
     }
 
     private fun account(suffix: String): GotifyAccount {

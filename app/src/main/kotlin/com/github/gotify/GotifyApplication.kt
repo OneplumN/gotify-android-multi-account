@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationManager
 import android.os.Build
 import androidx.preference.PreferenceManager
+import com.github.gotify.accounts.AccountStore
 import com.github.gotify.api.CertUtils
 import com.github.gotify.log.LoggerHelper
 import com.github.gotify.log.UncaughtExceptionHandler
@@ -30,6 +31,7 @@ class GotifyApplication : Application() {
             )
         }
 
+        AccountStore(this).migrateLegacyIfNeeded()
         val settings = Settings(this)
         if (settings.legacyCert != null) {
             Logger.info("Migrating legacy CA cert to new location")
