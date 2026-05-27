@@ -39,6 +39,7 @@ import com.github.gotify.R
 import com.github.gotify.Settings
 import com.github.gotify.Utils
 import com.github.gotify.Utils.launchCoroutine
+import com.github.gotify.accounts.AccountStore
 import com.github.gotify.api.Api
 import com.github.gotify.api.ApiException
 import com.github.gotify.api.ClientFactory
@@ -276,8 +277,8 @@ internal class MessagesActivity :
             binding.appBarDrawer.toolbar.subtitle = ""
         } else if (id == R.id.logout) {
             MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.logout)
-                .setMessage(getString(R.string.logout_confirm))
+                .setTitle(R.string.remove_account)
+                .setMessage(getString(R.string.remove_account_confirm))
                 .setPositiveButton(R.string.yes) { _, _ -> doLogout() }
                 .setNegativeButton(R.string.cancel, null)
                 .show()
@@ -285,6 +286,10 @@ internal class MessagesActivity :
             startActivity(Intent(this, LogsActivity::class.java))
         } else if (id == R.id.settings) {
             startActivity(Intent(this, SettingsActivity::class.java))
+        } else if (id == R.id.add_account) {
+            startActivity(Intent(this, LoginActivity::class.java))
+        } else if (id == R.id.switch_account) {
+            showSwitchAccountDialog()
         } else if (id == R.id.push_message) {
             val intent = Intent(this@MessagesActivity, ShareActivity::class.java)
             startActivity(intent)
@@ -296,8 +301,38 @@ internal class MessagesActivity :
     private fun doLogout() {
         setContentView(R.layout.splash)
         launchCoroutine {
-            deleteClientAndNavigateToLogin()
+            removeActiveAccount(deleteServerClient = true)
         }
+    }
+
+    private fun showSwitchAccountDialog() {
+        val accountStore = AccountStore(this)
+        val accounts = accountStore.all()
+        if (accounts.isEmpty()) {
+            startActivity(Intent(this, LoginActivity::class.java))
+            return
+        }
+        val activeAccountId = accountStore.active()?.id
+        val selectedIndex = accounts.indexOfFirst { it.id == activeAccountId }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.switch_account)
+            .setSingleChoiceItems(
+                accounts.map { it.label }.toTypedArray(),
+                selectedIndex.coerceAtLeast(0)
+            ) { dialog, which ->
+                accountStore.setActiveAccount(accounts[which].id)
+                dialog.dismiss()
+                restartForActiveAccount()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun restartForActiveAccount() {
+        stopService(Intent(this, WebSocketService::class.java))
+        CoilInstance.evict(this)
+        startActivity(Intent(this, InitializationActivity::class.java))
+        finish()
     }
 
     private fun startLoading() {
@@ -589,10 +624,19 @@ internal class MessagesActivity :
         }
     }
 
-    private fun deleteClientAndNavigateToLogin() {
+    private fun removeActiveAccount(deleteServerClient: Boolean) {
         val settings = viewModel.settings
-        val tokenClient = ClientFactory.clientToken(settings)
         stopService(Intent(this@MessagesActivity, WebSocketService::class.java))
+        if (deleteServerClient) {
+            deleteServerClient(settings)
+        }
+
+        settings.clear()
+        navigateAfterAccountRemoval()
+    }
+
+    private fun deleteServerClient(settings: Settings) {
+        val tokenClient = ClientFactory.clientToken(settings)
         try {
             Logger.info("Logging out...")
             val authApi = tokenClient.createService(AuthApi::class.java)
@@ -605,9 +649,14 @@ internal class MessagesActivity :
                 Logger.error(e, "Could not logout")
             }
         }
+    }
 
-        viewModel.settings.clear()
-        startActivity(Intent(this@MessagesActivity, LoginActivity::class.java))
+    private fun navigateAfterAccountRemoval() {
+        if (AccountStore(this).active() != null) {
+            startActivity(Intent(this@MessagesActivity, InitializationActivity::class.java))
+        } else {
+            startActivity(Intent(this@MessagesActivity, LoginActivity::class.java))
+        }
         finish()
     }
 

@@ -27,6 +27,16 @@
             android:id="@+id/settings"
             android:title="@string/title_activity_settings" />
         <item
+            android:icon="@drawable/ic_info"
+            android:orderInCategory="2"
+            android:id="@+id/add_account"
+            android:title="@string/add_account" />
+        <item
+            android:icon="@drawable/ic_dashboard"
+            android:orderInCategory="2"
+            android:id="@+id/switch_account"
+            android:title="@string/switch_account" />
+        <item
             android:orderInCategory="2"
             android:icon="@drawable/ic_bug_report"
             android:id="@+id/nav_logs"
@@ -35,7 +45,7 @@
             android:icon="@drawable/ic_power_setting"
             android:orderInCategory="2"
             android:id="@+id/logout"
-            android:title="@string/logout" />
+            android:title="@string/remove_account" />
     </group>
 
 </menu>

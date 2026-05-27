@@ -15,6 +15,11 @@
     <string name="title_activity_logs">Logs</string>
     <string name="retry">Retry</string>
     <string name="logout">Logout</string>
+    <string name="accounts">Accounts</string>
+    <string name="add_account">Add account</string>
+    <string name="switch_account">Switch account</string>
+    <string name="remove_account">Remove account</string>
+    <string name="remove_account_confirm">Remove this account from Gotify Android?</string>
     <string name="oops">Oops</string>
     <string name="not_available">Cannot connect to %s</string>
     <string name="auth_failed">Server returned 401 unauthorized while trying to get current user. This can be caused by deleting the client for this session.</string>
@@ -61,7 +66,7 @@
     <string name="permissions_alarm_prompt">Gotify requires permission to schedule reconnecting after connection is lost.</string>
     <string name="gotify_logo">Gotify logo</string>
     <string name="refresh_all">Refresh all</string>
-    <string name="logout_confirm">Do you really want to logout?</string>
+    <string name="logout_confirm">Remove this account from Gotify Android?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="ack">Are you sure?</string>
