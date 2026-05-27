@@ -73,9 +73,11 @@ jobs:
 
       - name: Publish prerelease
         if: github.ref == 'refs/tags/zgotify'
-        uses: softprops/action-gh-release@v2
-        with:
-          name: zgotify
-          body: zgotify Android APK
-          prerelease: true
-          files: dist/zgotify.apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/zgotify.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --title zgotify \
+            --notes "zgotify Android APK" \
+            --prerelease
