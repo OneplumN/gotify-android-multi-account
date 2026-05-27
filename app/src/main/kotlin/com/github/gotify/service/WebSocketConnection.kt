@@ -32,13 +32,10 @@ internal class WebSocketConnection(
     private val reconnectDelay: Duration,
     private val exponentialBackoff: Boolean
 ) {
-    companion object {
-        private val ID = AtomicLong(0)
-    }
-
     private var alarmManagerCallback: OnAlarmListener? = null
     private var handlerCallback: Runnable? = null
     private val client: OkHttpClient
+    private val idCounter = AtomicLong(0)
     private val reconnectHandler = Handler(Looper.getMainLooper())
     private var errorCount = 0
 
@@ -105,7 +102,7 @@ internal class WebSocketConnection(
         }
         close()
         state = State.Connecting
-        val nextId = ID.incrementAndGet()
+        val nextId = idCounter.incrementAndGet()
         Logger.info("WebSocket($nextId): starting...")
 
         webSocket = client.newWebSocket(request(), Listener(nextId))
@@ -114,8 +111,8 @@ internal class WebSocketConnection(
 
     @Synchronized
     fun close() {
-        val closedId = ID.get()
-        ID.incrementAndGet()
+        val closedId = idCounter.get()
+        idCounter.incrementAndGet()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             alarmManagerCallback?.run(alarmManager::cancel)
             alarmManagerCallback = null
@@ -136,7 +133,7 @@ internal class WebSocketConnection(
         state = State.Disconnected
     }
 
-    fun scheduleReconnectNow(scheduleIn: Duration) = scheduleReconnect(ID.get(), scheduleIn)
+    fun scheduleReconnectNow(scheduleIn: Duration) = scheduleReconnect(idCounter.get(), scheduleIn)
 
     @Synchronized
     fun scheduleReconnect(id: Long, scheduleIn: Duration) {
@@ -228,7 +225,7 @@ internal class WebSocketConnection(
 
     @Synchronized
     private fun syncExec(id: Long, runnable: () -> Unit) {
-        if (ID.get() == id) {
+        if (idCounter.get() == id) {
             runnable()
         }
     }

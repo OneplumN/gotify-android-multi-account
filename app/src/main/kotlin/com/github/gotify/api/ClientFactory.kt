@@ -2,6 +2,7 @@ package com.github.gotify.api
 
 import com.github.gotify.SSLSettings
 import com.github.gotify.Settings
+import com.github.gotify.accounts.GotifyAccount
 import com.github.gotify.client.ApiClient
 import com.github.gotify.client.api.InfoApi
 import com.github.gotify.client.api.OidcApi
@@ -39,6 +40,17 @@ internal object ClientFactory {
         return client
     }
 
+    fun clientToken(account: GotifyAccount): ApiClient {
+        val client = defaultClient(
+            arrayOf("clientTokenHeader"),
+            account.sslSettings(),
+            account.url
+        )
+        val tokenAuth = client.apiAuthorizations["clientTokenHeader"] as ApiKeyAuth
+        tokenAuth.apiKey = account.token
+        return client
+    }
+
     fun infoApi(
         settings: Settings,
         sslSettings: SSLSettings = settings.sslSettings(),
@@ -59,6 +71,10 @@ internal object ClientFactory {
         return clientToken(settings).createService(UserApi::class.java)
     }
 
+    fun userApiWithToken(account: GotifyAccount): UserApi {
+        return clientToken(account).createService(UserApi::class.java)
+    }
+
     private fun defaultClient(
         authentications: Array<String>,
         settings: Settings,
@@ -69,5 +85,25 @@ internal object ClientFactory {
         CertUtils.applySslSettings(client.okBuilder, sslSettings)
         client.adapterBuilder.baseUrl("$baseUrl/")
         return client
+    }
+
+    private fun defaultClient(
+        authentications: Array<String>,
+        sslSettings: SSLSettings,
+        baseUrl: String
+    ): ApiClient {
+        val client = ApiClient(authentications)
+        CertUtils.applySslSettings(client.okBuilder, sslSettings)
+        client.adapterBuilder.baseUrl("$baseUrl/")
+        return client
+    }
+
+    private fun GotifyAccount.sslSettings(): SSLSettings {
+        return SSLSettings(
+            validateSSL,
+            caCertPath,
+            clientCertPath,
+            clientCertPassword
+        )
     }
 }

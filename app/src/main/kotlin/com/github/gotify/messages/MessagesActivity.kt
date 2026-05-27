@@ -78,6 +78,10 @@ internal class MessagesActivity :
 
     private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            val accountId = intent.getStringExtra(WebSocketService.EXTRA_ACCOUNT_ID)
+            if (accountId != AccountStore(context).active()?.id) {
+                return
+            }
             val messageJson = intent.getStringExtra("message")
             val message = Utils.JSON.fromJson(
                 messageJson,
@@ -93,6 +97,7 @@ internal class MessagesActivity :
         super.onCreate(savedInstanceState)
         binding = ActivityMessagesBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        activateAccountFromIntent(intent)
         viewModel = ViewModelProvider(this, MessagesModelFactory(this))[MessagesModel::class.java]
         Logger.info("Entering " + javaClass.simpleName)
         initDrawer()
@@ -329,7 +334,7 @@ internal class MessagesActivity :
     }
 
     private fun restartForActiveAccount() {
-        stopService(Intent(this, WebSocketService::class.java))
+        startService(Intent(this, WebSocketService::class.java))
         CoilInstance.evict(this)
         startActivity(Intent(this, InitializationActivity::class.java))
         finish()
@@ -380,6 +385,26 @@ internal class MessagesActivity :
     override fun onPause() {
         unregisterReceiver(receiver)
         super.onPause()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (activateAccountFromIntent(intent)) {
+            restartForActiveAccount()
+        }
+    }
+
+    private fun activateAccountFromIntent(intent: Intent?): Boolean {
+        val accountId = intent?.getStringExtra(WebSocketService.EXTRA_ACCOUNT_ID) ?: return false
+        val accountStore = AccountStore(this)
+        if (accountStore.active()?.id == accountId) {
+            return false
+        }
+        if (accountStore.all().none { it.id == accountId }) {
+            return false
+        }
+        accountStore.setActiveAccount(accountId)
+        return true
     }
 
     private fun selectAppInMenu(appItem: MenuItem?) {
