@@ -13,6 +13,7 @@ import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.github.gotify.R
 import com.github.gotify.Settings
+import com.github.gotify.accounts.AccountStore
 import com.github.gotify.api.ApiException
 import com.github.gotify.api.Callback
 import com.github.gotify.api.Callback.SuccessCallback
@@ -41,6 +42,9 @@ internal class InitializationActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val accountStore = AccountStore(this)
+        accountStore.migrateLegacyIfNeeded()
+        ensureActiveAccount(accountStore)
         settings = Settings(this)
         Logger.info("Entering ${javaClass.simpleName}")
 
@@ -59,6 +63,14 @@ internal class InitializationActivity : AppCompatActivity() {
         } else {
             showLogin()
         }
+    }
+
+    private fun ensureActiveAccount(accountStore: AccountStore) {
+        if (accountStore.activeAccountId() != null) {
+            return
+        }
+        val firstAccount = accountStore.all().firstOrNull() ?: return
+        accountStore.setActiveAccount(firstAccount.id)
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
