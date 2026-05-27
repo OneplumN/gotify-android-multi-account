@@ -14,6 +14,7 @@ import com.github.gotify.client.model.ClientParams
 import com.github.gotify.client.model.GotifyInfo
 import com.github.gotify.client.model.OIDCExternalAuthorizeRequest
 import com.github.gotify.client.model.OIDCExternalTokenRequest
+import com.github.gotify.client.model.User
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import org.tinylog.kotlin.Logger
@@ -30,6 +31,7 @@ internal class LoginViewModel(private val settings: Settings) : ViewModel() {
         private set
 
     private var authenticatedClient: ApiClient? = null
+    private var authenticatedUser: User? = null
 
     fun invalidateUrl() {
         gotifyInfo = null
@@ -38,10 +40,10 @@ internal class LoginViewModel(private val settings: Settings) : ViewModel() {
 
     fun checkUrl(url: String) {
         _state.value = LoginState.CheckingUrl
-        settings.url = url
+        settings.loginUrl = url
 
         try {
-            ClientFactory.infoApi(settings, settings.sslSettings(), url)
+            ClientFactory.infoApi(settings, settings.loginSslSettings(), url)
                 .info
                 .enqueue(
                     Callback.call(
@@ -59,7 +61,7 @@ internal class LoginViewModel(private val settings: Settings) : ViewModel() {
 
     private fun tryVersionEndpoint(url: String) {
         try {
-            ClientFactory.infoApi(settings, settings.sslSettings(), url)
+            ClientFactory.infoApi(settings, settings.loginSslSettings(), url)
                 .version
                 .enqueue(
                     Callback.call(
@@ -89,18 +91,26 @@ internal class LoginViewModel(private val settings: Settings) : ViewModel() {
     fun login(username: String, password: String) {
         _state.value = LoginState.LoggingIn
 
-        val client = ClientFactory.basicAuth(settings, settings.sslSettings(), username, password)
+        val client = ClientFactory.basicAuth(
+            settings,
+            settings.loginSslSettings(),
+            username,
+            password,
+            settings.loginUrl
+        )
         authenticatedClient = client
         client.createService(UserApi::class.java)
             .currentUser()
             .enqueue(
                 Callback.call(
-                    onSuccess = {
+                    onSuccess = Callback.SuccessBody { user ->
+                        authenticatedUser = user
                         _state.value = LoginState.WaitingForClientName
                         _events.trySend(LoginEvent.ShowClientNameDialog)
                     },
                     onError = {
                         authenticatedClient = null
+                        authenticatedUser = null
                         _state.value = LoginState.Ready
                         _events.trySend(LoginEvent.InvalidCredentials)
                     }
@@ -117,7 +127,8 @@ internal class LoginViewModel(private val settings: Settings) : ViewModel() {
             .enqueue(
                 Callback.call(
                     onSuccess = Callback.SuccessBody { c ->
-                        settings.token = c.token
+                        val user = authenticatedUser
+                        saveLoggedInAccount(c.token, user?.name, user?.admin ?: false)
                         _events.trySend(LoginEvent.LoginSuccess)
                     },
                     onError = {
@@ -130,6 +141,7 @@ internal class LoginViewModel(private val settings: Settings) : ViewModel() {
 
     fun cancelClientCreation() {
         authenticatedClient = null
+        authenticatedUser = null
         _state.value = LoginState.Ready
     }
 
@@ -149,7 +161,7 @@ internal class LoginViewModel(private val settings: Settings) : ViewModel() {
             "OIDC: Requesting redirect url from gotify server: redirect: ${request.redirectUri}, challenge: ${request.codeChallenge}"
         )
 
-        ClientFactory.oidcApi(settings)
+        ClientFactory.oidcApi(settings, settings.loginSslSettings(), settings.loginUrl)
             .externalAuthorize(request)
             .enqueue(
                 Callback.call(
@@ -199,12 +211,16 @@ internal class LoginViewModel(private val settings: Settings) : ViewModel() {
             "OIDC: requesting client token: code=${request.code}, state=${request.state}, code_verifier=${request.codeVerifier}"
         )
 
-        ClientFactory.oidcApi(settings, settings.sslSettings())
+        ClientFactory.oidcApi(settings, settings.loginSslSettings(), settings.loginUrl)
             .externalToken(request)
             .enqueue(
                 Callback.call(
                     onSuccess = Callback.SuccessBody { response ->
-                        settings.token = response.token
+                        saveLoggedInAccount(
+                            response.token,
+                            response.user.name,
+                            response.user.admin
+                        )
                         Logger.info("OIDC: login successful as ${response.user.name}")
                         _events.trySend(LoginEvent.LoginSuccess)
                     },
@@ -215,6 +231,15 @@ internal class LoginViewModel(private val settings: Settings) : ViewModel() {
                     }
                 )
             )
+    }
+
+    private fun saveLoggedInAccount(token: String, username: String?, admin: Boolean) {
+        settings.saveAccountForLogin(
+            token,
+            username,
+            admin,
+            gotifyInfo?.version ?: "UNKNOWN"
+        )
     }
 
     class Factory(private val settings: Settings) : ViewModelProvider.Factory {

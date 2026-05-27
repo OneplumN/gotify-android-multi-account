@@ -13,20 +13,10 @@ internal class Settings(context: Context) {
     val filesDir: String
     var url: String
         get() = activeAccount()?.url ?: sharedPreferences.getString("url", "")!!
-        set(value) {
-            updateActiveAccount { account ->
-                account.copy(
-                    url = value,
-                    label = AccountStore.createLabel(value, account.username)
-                )
-            } ?: sharedPreferences.edit { putString("url", value) }
-        }
+        set(value) = sharedPreferences.edit { putString("url", value) }
     var token: String?
         get() = activeAccount()?.token ?: sharedPreferences.getString("token", null)
-        set(value) {
-            updateActiveAccount { account -> account.copy(token = value ?: "") }
-                ?: sharedPreferences.edit { putString("token", value) }
-        }
+        set(value) = sharedPreferences.edit { putString("token", value) }
     var user: User? = null
         get() {
             val account = activeAccount()
@@ -80,6 +70,23 @@ internal class Settings(context: Context) {
     var oidcState: String?
         get() = sharedPreferences.getString("oidc_state", null)
         set(value) = sharedPreferences.edit { putString("oidc_state", value) }
+    var loginUrl: String
+        get() = sharedPreferences.getString("url", "") ?: ""
+        set(value) = sharedPreferences.edit { putString("url", value) }
+    var loginValidateSSL: Boolean
+        get() = sharedPreferences.getBoolean("validateSSL", true)
+        set(value) = sharedPreferences.edit { putBoolean("validateSSL", value) }
+    var loginCaCertPath: String?
+        get() = sharedPreferences.getString("caCertPath", null)
+        set(value) = sharedPreferences
+            .edit(commit = true) { putString("caCertPath", value) }
+            .toUnit()
+    var loginClientCertPath: String?
+        get() = sharedPreferences.getString("clientCertPath", null)
+        set(value) = sharedPreferences.edit { putString("clientCertPath", value) }
+    var loginClientCertPassword: String?
+        get() = sharedPreferences.getString("clientCertPass", null)
+        set(value) = sharedPreferences.edit { putString("clientCertPass", value) }
 
     init {
         sharedPreferences = context.getSharedPreferences("gotify", Context.MODE_PRIVATE)
@@ -94,14 +101,14 @@ internal class Settings(context: Context) {
         if (activeAccountId != null) {
             accountStore.remove(activeAccountId)
         } else {
-            url = ""
             token = null
-            validateSSL = true
             legacyCert = null
-            caCertPath = null
-            clientCertPath = null
-            clientCertPassword = null
         }
+        url = ""
+        loginValidateSSL = true
+        loginCaCertPath = null
+        loginClientCertPath = null
+        loginClientCertPassword = null
         oidcCodeVerifier = null
         oidcState = null
     }
@@ -116,12 +123,44 @@ internal class Settings(context: Context) {
         } ?: sharedPreferences.edit { putString("username", name).putBoolean("admin", admin) }
     }
 
+    fun saveAccountForLogin(
+        token: String,
+        username: String?,
+        admin: Boolean,
+        serverVersion: String
+    ) {
+        val loginUrl = sharedPreferences.getString("url", "") ?: ""
+        val existing = accountStore.findByCredentials(loginUrl, token)
+        val account = AccountStore.createAccount(
+            url = loginUrl,
+            token = token,
+            username = username,
+            admin = admin,
+            serverVersion = serverVersion,
+            validateSSL = loginValidateSSL,
+            caCertPath = loginCaCertPath,
+            clientCertPath = loginClientCertPath,
+            clientCertPassword = loginClientCertPassword,
+            id = existing?.id ?: java.util.UUID.randomUUID().toString()
+        )
+        accountStore.save(account, makeActive = true)
+    }
+
     fun sslSettings(): SSLSettings {
         return SSLSettings(
             validateSSL,
             caCertPath,
             clientCertPath,
             clientCertPassword
+        )
+    }
+
+    fun loginSslSettings(): SSLSettings {
+        return SSLSettings(
+            loginValidateSSL,
+            loginCaCertPath,
+            loginClientCertPath,
+            loginClientCertPassword
         )
     }
 

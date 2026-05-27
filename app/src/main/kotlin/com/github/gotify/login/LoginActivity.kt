@@ -56,7 +56,7 @@ internal class LoginActivity : AppCompatActivity() {
                 copyStreamToFile(fileStream, destinationFile)
 
                 caCertCN = getNameOfCertContent(destinationFile) ?: "unknown"
-                settings.caCertPath = destinationFile.absolutePath
+                settings.loginCaCertPath = destinationFile.absolutePath
                 advancedDialog.showRemoveCaCertificate(caCertCN!!)
             } catch (e: Exception) {
                 Utils.showSnackBar(this, getString(R.string.select_ca_failed, e.message))
@@ -75,7 +75,7 @@ internal class LoginActivity : AppCompatActivity() {
                 val destinationFile = File(filesDir, CertUtils.CLIENT_CERT_NAME)
                 copyStreamToFile(fileStream, destinationFile)
 
-                settings.clientCertPath = destinationFile.absolutePath
+                settings.loginClientCertPath = destinationFile.absolutePath
                 advancedDialog.showRemoveClientCertificate()
             } catch (e: Exception) {
                 Utils.showSnackBar(this, getString(R.string.select_client_failed, e.message))
@@ -285,7 +285,7 @@ internal class LoginActivity : AppCompatActivity() {
         advancedDialog = AdvancedDialog(this, layoutInflater)
             .onDisableSSLChanged { _, disable ->
                 viewModel.invalidateUrl()
-                settings.validateSSL = !disable
+                settings.loginValidateSSL = !disable
             }
             .onClickSelectCaCertificate {
                 viewModel.invalidateUrl()
@@ -293,7 +293,7 @@ internal class LoginActivity : AppCompatActivity() {
             }
             .onClickRemoveCaCertificate {
                 viewModel.invalidateUrl()
-                settings.caCertPath = null
+                settings.loginCaCertPath = null
                 caCertCN = null
             }
             .onClickSelectClientCertificate {
@@ -302,17 +302,17 @@ internal class LoginActivity : AppCompatActivity() {
             }
             .onClickRemoveClientCertificate {
                 viewModel.invalidateUrl()
-                settings.clientCertPath = null
+                settings.loginClientCertPath = null
             }
             .onClose { newPassword ->
-                settings.clientCertPassword = newPassword
+                settings.loginClientCertPassword = newPassword
             }
             .show(
-                !settings.validateSSL,
-                settings.caCertPath,
+                !settings.loginValidateSSL,
+                settings.loginCaCertPath,
                 caCertCN,
-                settings.clientCertPath,
-                settings.clientCertPassword
+                settings.loginClientCertPath,
+                settings.loginClientCertPassword
             )
     }
 

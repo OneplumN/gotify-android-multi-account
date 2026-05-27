@@ -22,9 +22,10 @@ internal object ClientFactory {
         settings: Settings,
         sslSettings: SSLSettings,
         username: String,
-        password: String
+        password: String,
+        baseUrl: String = settings.url
     ): ApiClient {
-        val client = defaultClient(arrayOf("basicAuth"), settings, sslSettings)
+        val client = defaultClient(arrayOf("basicAuth"), settings, sslSettings, baseUrl)
         val auth = client.apiAuthorizations["basicAuth"] as HttpBasicAuth
         auth.username = username
         auth.password = password
