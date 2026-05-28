@@ -210,6 +210,16 @@ internal class WebSocketConnection(
             super.onClosed(webSocket, code, reason)
         }
 
+        override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+            syncExec(id) {
+                Logger.warn(
+                    "${logPrefix(id)}: closing after ${connectedFor()} " +
+                        "code=$code reason=$reason"
+                )
+            }
+            super.onClosing(webSocket, code, reason)
+        }
+
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             syncExec(id) {
                 val code = if (response != null) " statusCode=${response.code}" else ""

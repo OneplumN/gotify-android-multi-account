@@ -55,6 +55,7 @@ import com.github.gotify.log.LogsActivity
 import com.github.gotify.login.LoginActivity
 import com.github.gotify.messages.provider.MessageState
 import com.github.gotify.messages.provider.MessageWithImage
+import com.github.gotify.service.AndroidRuntimeDiagnostics
 import com.github.gotify.service.WebSocketService
 import com.github.gotify.settings.SettingsActivity
 import com.github.gotify.sharing.ShareActivity
@@ -352,6 +353,7 @@ internal class MessagesActivity :
 
     override fun onResume() {
         Logger.info("OnResume " + javaClass.simpleName)
+        Logger.info("MessagesActivity foreground diagnostics ${AndroidRuntimeDiagnostics.snapshot(this)}")
         val context = applicationContext
         val nManager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nManager.cancelAll()
@@ -383,6 +385,7 @@ internal class MessagesActivity :
     }
 
     override fun onPause() {
+        Logger.info("OnPause ${javaClass.simpleName} ${AndroidRuntimeDiagnostics.snapshot(this)}")
         unregisterReceiver(receiver)
         super.onPause()
     }

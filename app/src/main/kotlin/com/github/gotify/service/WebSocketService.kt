@@ -63,13 +63,31 @@ internal class WebSocketService : Service() {
         object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 super.onAvailable(network)
-                Logger.info("WebSocket: Network available, reconnect if needed.")
+                Logger.info(
+                    "WebSocket: Network available, reconnect if needed. " +
+                        AndroidRuntimeDiagnostics.networkSnapshot(this@WebSocketService, network) +
+                        " ${AndroidRuntimeDiagnostics.snapshot(this@WebSocketService)}"
+                )
                 runtimes.values.forEach { it.connection?.start() }
+            }
+
+            override fun onLost(network: Network) {
+                super.onLost(network)
+                Logger.warn(
+                    "WebSocket: Network lost. " +
+                        AndroidRuntimeDiagnostics.networkSnapshot(this@WebSocketService, network) +
+                        " ${AndroidRuntimeDiagnostics.snapshot(this@WebSocketService)}"
+                )
             }
 
             override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
                 super.onLinkPropertiesChanged(network, linkProperties)
-                Logger.info("WebSocket: Network properties changed, reconnect if needed.")
+                Logger.info(
+                    "WebSocket: Network properties changed, reconnect if needed. " +
+                        "interface=${linkProperties.interfaceName} " +
+                        AndroidRuntimeDiagnostics.networkSnapshot(this@WebSocketService, network) +
+                        " ${AndroidRuntimeDiagnostics.snapshot(this@WebSocketService)}"
+                )
                 runtimes.values.forEach { it.connection?.start() }
             }
         }
@@ -127,6 +145,7 @@ internal class WebSocketService : Service() {
             stopSelf()
             return
         }
+        Logger.info("WebSocket: Service diagnostics ${AndroidRuntimeDiagnostics.snapshot(this)}")
         showForegroundNotification(getString(R.string.websocket_init), accountSummary(accounts))
 
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -282,6 +301,10 @@ internal class WebSocketService : Service() {
 
     private fun onFailure(accountId: String, status: String, reconnectIn: Duration) {
         val runtime = runtimes[accountId] ?: return
+        Logger.warn(
+            "WebSocket[${runtime.account.label}]: failure diagnostics " +
+                AndroidRuntimeDiagnostics.snapshot(this)
+        )
         val title = getString(R.string.websocket_error, status)
         showForegroundNotification(
             title,
@@ -291,6 +314,10 @@ internal class WebSocketService : Service() {
 
     private fun onOpen(accountId: String) {
         if (!isAccountKnown(accountId)) return
+        Logger.info(
+            "WebSocket[${runtimes[accountId]?.account?.label}]: open diagnostics " +
+                AndroidRuntimeDiagnostics.snapshot(this)
+        )
         showForegroundNotification(
             getString(R.string.websocket_listening),
             accountSummary(runtimes.values.map { it.account })
