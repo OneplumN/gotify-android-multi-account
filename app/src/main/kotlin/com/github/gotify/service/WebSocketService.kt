@@ -317,7 +317,9 @@ internal class WebSocketService : Service() {
         val title = getString(R.string.websocket_error, status)
         showForegroundNotification(
             title,
-            "${runtime.account.label}: ${getString(R.string.websocket_reconnect, reconnectIn)}"
+            "${runtime.account.label}: ${
+                getString(R.string.websocket_reconnect, reconnectIn.toString())
+            }"
         )
     }
 
