@@ -65,7 +65,9 @@ internal class Settings(context: Context) {
                 ?: sharedPreferences.edit { putString("clientCertPath", value) }
         }
     var clientCertPassword: String?
-        get() = activeAccount()?.clientCertPassword ?: sharedPreferences.getString("clientCertPass", null)
+        get() =
+            activeAccount()?.clientCertPassword
+                ?: sharedPreferences.getString("clientCertPass", null)
         set(value) {
             updateActiveAccount { account -> account.copy(clientCertPassword = value) }
                 ?: sharedPreferences.edit { putString("clientCertPass", value) }

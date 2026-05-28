@@ -353,7 +353,9 @@ internal class MessagesActivity :
 
     override fun onResume() {
         Logger.info("OnResume " + javaClass.simpleName)
-        Logger.info("MessagesActivity foreground diagnostics ${AndroidRuntimeDiagnostics.snapshot(this)}")
+        Logger.info(
+            "MessagesActivity foreground diagnostics ${AndroidRuntimeDiagnostics.snapshot(this)}"
+        )
         val context = applicationContext
         val nManager = context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nManager.cancelAll()
