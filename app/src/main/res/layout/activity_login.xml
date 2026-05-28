@@ -16,7 +16,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/open_logs"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="40dp"
             android:insetTop="0dp"
             style="@style/Widget.Material3.Button.TextButton"
@@ -24,6 +24,20 @@
             android:background="@null"
             android:textColor="@color/colorNavPrimary"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/cancel_login"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancel_login"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:background="@null"
+            android:insetTop="0dp"
+            android:text="@string/cancel"
+            android:textColor="@color/colorNavPrimary"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator

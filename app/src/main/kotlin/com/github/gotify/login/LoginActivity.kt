@@ -19,12 +19,14 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.github.gotify.R
 import com.github.gotify.Settings
 import com.github.gotify.Utils
+import com.github.gotify.accounts.AccountStore
 import com.github.gotify.api.CertUtils
 import com.github.gotify.databinding.ActivityLoginBinding
 import com.github.gotify.databinding.ClientNameDialogBinding
 import com.github.gotify.init.InitializationActivity
 import com.github.gotify.log.LogsActivity
 import com.github.gotify.log.UncaughtExceptionHandler
+import com.github.gotify.messages.MessagesActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import java.io.FileInputStream
@@ -105,6 +107,13 @@ internal class LoginActivity : AppCompatActivity() {
         binding.checkurl.setOnClickListener { doCheckUrl() }
         binding.openLogs.setOnClickListener {
             startActivity(Intent(this, LogsActivity::class.java))
+        }
+        if (AccountStore(this).all().isNotEmpty()) {
+            binding.cancelLogin.visibility = View.VISIBLE
+            binding.cancelLogin.setOnClickListener {
+                startActivity(Intent(this, MessagesActivity::class.java))
+                finish()
+            }
         }
         binding.advancedSettings.setOnClickListener { toggleShowAdvanced() }
         binding.login.setOnClickListener { doLogin() }

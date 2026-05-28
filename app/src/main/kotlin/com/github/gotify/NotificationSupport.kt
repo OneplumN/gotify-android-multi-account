@@ -178,9 +178,7 @@ internal object NotificationSupport {
      *
      * <pre>
      * Gotify Priority  | Android Importance
-     * <= 0             | min
-     * 1-3              | low
-     * 4-7              | default
+     * <= 7             | default
      * >= 8             | high
      * </pre>
      *
@@ -188,14 +186,10 @@ internal object NotificationSupport {
      * @return the identifier of the notification channel as a String.
      */
     fun convertPriorityToChannel(priority: Long): String {
-        return if (priority < 1) {
-            Channel.MESSAGES_IMPORTANCE_MIN
-        } else if (priority < 4) {
-            Channel.MESSAGES_IMPORTANCE_LOW
-        } else if (priority < 8) {
-            Channel.MESSAGES_IMPORTANCE_DEFAULT
-        } else {
+        return if (priority >= 8) {
             Channel.MESSAGES_IMPORTANCE_HIGH
+        } else {
+            Channel.MESSAGES_IMPORTANCE_DEFAULT
         }
     }
 

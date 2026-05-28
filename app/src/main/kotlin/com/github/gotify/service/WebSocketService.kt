@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.preference.PreferenceManager
@@ -536,7 +537,22 @@ internal class WebSocketService : Service() {
             }
         }
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(notificationId(account.id, id), b.build())
+        val notificationId = notificationId(account.id, id)
+        val notificationsEnabled = NotificationManagerCompat.from(this).areNotificationsEnabled()
+        val channelImportance = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationManager.getNotificationChannel(channelId)?.importance?.toString() ?: "missing"
+        } else {
+            "pre-o"
+        }
+        if (!notificationsEnabled) {
+            Logger.warn("Notification[$account.label]: app notifications are disabled by Android")
+        }
+        notificationManager.notify(notificationId, b.build())
+        Logger.info(
+            "Notification[${account.label}]: posted id=$notificationId " +
+                "messageId=$id priority=$priority channel=$channelId " +
+                "importance=$channelImportance enabled=$notificationsEnabled"
+        )
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
