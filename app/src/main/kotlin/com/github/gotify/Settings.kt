@@ -30,7 +30,9 @@ internal class Settings(context: Context) {
         }
         private set
     var serverVersion: String
-        get() = activeAccount()?.serverVersion ?: sharedPreferences.getString("version", "UNKNOWN")!!
+        get() =
+            activeAccount()?.serverVersion
+                ?: sharedPreferences.getString("version", "UNKNOWN")!!
         set(value) {
             updateActiveAccount { account -> account.copy(serverVersion = value) }
                 ?: sharedPreferences.edit { putString("version", value) }
@@ -47,13 +49,17 @@ internal class Settings(context: Context) {
                     .toUnit()
         }
     var validateSSL: Boolean
-        get() = activeAccount()?.validateSSL ?: sharedPreferences.getBoolean("validateSSL", true)
+        get() =
+            activeAccount()?.validateSSL
+                ?: sharedPreferences.getBoolean("validateSSL", true)
         set(value) {
             updateActiveAccount { account -> account.copy(validateSSL = value) }
                 ?: sharedPreferences.edit { putBoolean("validateSSL", value) }
         }
     var clientCertPath: String?
-        get() = activeAccount()?.clientCertPath ?: sharedPreferences.getString("clientCertPath", null)
+        get() =
+            activeAccount()?.clientCertPath
+                ?: sharedPreferences.getString("clientCertPath", null)
         set(value) {
             updateActiveAccount { account -> account.copy(clientCertPath = value) }
                 ?: sharedPreferences.edit { putString("clientCertPath", value) }

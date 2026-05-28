@@ -405,7 +405,8 @@ internal class WebSocketService : Service() {
 
     private fun isAccountKnown(accountId: String): Boolean = runtimes.containsKey(accountId)
 
-    private fun isAccountActive(accountId: String): Boolean = AccountStore(this).active()?.id == accountId
+    private fun isAccountActive(accountId: String): Boolean =
+        AccountStore(this).active()?.id == accountId
 
     private fun loadLastReceivedMessage(accountId: String): Long {
         return getSharedPreferences(MESSAGE_STATE_PREFERENCES, MODE_PRIVATE)
@@ -419,7 +420,8 @@ internal class WebSocketService : Service() {
             .apply()
     }
 
-    private fun lastReceivedMessageKey(accountId: String): String = "last_received_message_$accountId"
+    private fun lastReceivedMessageKey(accountId: String): String =
+        "last_received_message_$accountId"
 
     private fun showForegroundNotification(title: String, message: String? = null) {
         val notificationIntent = Intent(this, MessagesActivity::class.java)
@@ -593,7 +595,11 @@ internal class WebSocketService : Service() {
         val notificationId = notificationId(account.id, id)
         val notificationsEnabled = NotificationManagerCompat.from(this).areNotificationsEnabled()
         val channelImportance = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            notificationManager.getNotificationChannel(channelId)?.importance?.toString() ?: "missing"
+            notificationManager
+                .getNotificationChannel(channelId)
+                ?.importance
+                ?.toString()
+                ?: "missing"
         } else {
             "pre-o"
         }

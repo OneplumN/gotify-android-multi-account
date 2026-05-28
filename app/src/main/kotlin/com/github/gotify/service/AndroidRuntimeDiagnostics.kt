@@ -75,8 +75,12 @@ internal object AndroidRuntimeDiagnostics {
         }
         val transports = mutableListOf<String>()
         if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) transports += "wifi"
-        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) transports += "cellular"
-        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) transports += "ethernet"
+        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+            transports += "cellular"
+        }
+        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+            transports += "ethernet"
+        }
         if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) transports += "vpn"
 
         val flags = mutableListOf<String>()

@@ -9,7 +9,10 @@ import java.util.UUID
 
 internal class AccountStore(context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
-    private val legacyPreferences = context.getSharedPreferences(LEGACY_PREFERENCES_NAME, Context.MODE_PRIVATE)
+    private val legacyPreferences = context.getSharedPreferences(
+        LEGACY_PREFERENCES_NAME,
+        Context.MODE_PRIVATE
+    )
 
     fun all(): List<GotifyAccount> = readAccounts()
 
