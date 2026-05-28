@@ -55,6 +55,7 @@ internal class WebSocketService : Service() {
         val NEW_MESSAGE_BROADCAST = "${WebSocketService::class.java.name}.NEW_MESSAGE$castAddition"
         const val EXTRA_ACCOUNT_ID = "account_id"
         private const val NOT_LOADED = -2L
+        private const val MESSAGE_STATE_PREFERENCES = "gotify_message_state"
     }
 
     private lateinit var settings: Settings
@@ -201,10 +202,18 @@ internal class WebSocketService : Service() {
             )
             runtimes[account.id] = runtime
 
-            if (runtime.lastReceivedMessage.get() == NOT_LOADED) {
+            val persistedLastReceivedMessage = loadLastReceivedMessage(account.id)
+            if (persistedLastReceivedMessage != NOT_LOADED) {
+                runtime.lastReceivedMessage.set(persistedLastReceivedMessage)
+                Logger.info(
+                    "WebSocket[${account.label}]: restored last received message " +
+                        persistedLastReceivedMessage
+                )
+            } else {
                 runtime.missingMessageUtil.lastReceivedMessage {
                     if (isAccountKnown(account.id)) {
                         runtime.lastReceivedMessage.set(it)
+                        saveLastReceivedMessage(account.id, it)
                     }
                 }
             }
@@ -318,6 +327,7 @@ internal class WebSocketService : Service() {
             "WebSocket[${runtimes[accountId]?.account?.label}]: open diagnostics " +
                 AndroidRuntimeDiagnostics.snapshot(this)
         )
+        notifyMissedNotifications(accountId)
         showForegroundNotification(
             getString(R.string.websocket_listening),
             accountSummary(runtimes.values.map { it.account })
@@ -348,6 +358,7 @@ internal class WebSocketService : Service() {
         messages.forEach { message ->
             if (runtime.lastReceivedMessage.get() < message.id) {
                 runtime.lastReceivedMessage.set(message.id)
+                saveLastReceivedMessage(accountId, message.id)
                 highestPriority = highestPriority.coerceAtLeast(message.priority ?: 0L)
             }
             broadcast(accountId, message)
@@ -367,6 +378,7 @@ internal class WebSocketService : Service() {
         val runtime = runtimes[accountId] ?: return
         if (runtime.lastReceivedMessage.get() < message.id) {
             runtime.lastReceivedMessage.set(message.id)
+            saveLastReceivedMessage(accountId, message.id)
         }
         broadcast(accountId, message)
         showNotification(
@@ -394,6 +406,20 @@ internal class WebSocketService : Service() {
     private fun isAccountKnown(accountId: String): Boolean = runtimes.containsKey(accountId)
 
     private fun isAccountActive(accountId: String): Boolean = AccountStore(this).active()?.id == accountId
+
+    private fun loadLastReceivedMessage(accountId: String): Long {
+        return getSharedPreferences(MESSAGE_STATE_PREFERENCES, MODE_PRIVATE)
+            .getLong(lastReceivedMessageKey(accountId), NOT_LOADED)
+    }
+
+    private fun saveLastReceivedMessage(accountId: String, messageId: Long) {
+        getSharedPreferences(MESSAGE_STATE_PREFERENCES, MODE_PRIVATE)
+            .edit()
+            .putLong(lastReceivedMessageKey(accountId), messageId)
+            .apply()
+    }
+
+    private fun lastReceivedMessageKey(accountId: String): String = "last_received_message_$accountId"
 
     private fun showForegroundNotification(title: String, message: String? = null) {
         val notificationIntent = Intent(this, MessagesActivity::class.java)

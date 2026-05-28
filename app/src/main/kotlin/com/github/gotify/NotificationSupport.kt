@@ -76,7 +76,7 @@ internal object NotificationSupport {
             }
 
             val messagesImportanceHigh = NotificationChannel(
-                Channel.MESSAGES_IMPORTANCE_HIGH,
+                Channel.MESSAGES_IMPORTANCE_HIGH_V2,
                 context.getString(R.string.notification_channel_title_high),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
@@ -146,7 +146,7 @@ internal object NotificationSupport {
             }
 
             val messagesImportanceHigh = NotificationChannel(
-                getChannelID(Channel.MESSAGES_IMPORTANCE_HIGH, groupId),
+                getChannelID(Channel.MESSAGES_IMPORTANCE_HIGH_V2, groupId),
                 context.getString(R.string.notification_channel_title_high),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
@@ -187,7 +187,7 @@ internal object NotificationSupport {
      */
     fun convertPriorityToChannel(priority: Long): String {
         return if (priority >= 8) {
-            Channel.MESSAGES_IMPORTANCE_HIGH
+            Channel.MESSAGES_IMPORTANCE_HIGH_V2
         } else {
             Channel.MESSAGES_IMPORTANCE_DEFAULT
         }
@@ -218,6 +218,7 @@ internal object NotificationSupport {
         const val MESSAGES_IMPORTANCE_LOW = "gotify_messages_low_importance"
         const val MESSAGES_IMPORTANCE_DEFAULT = "gotify_messages_default_importance"
         const val MESSAGES_IMPORTANCE_HIGH = "gotify_messages_high_importance"
+        const val MESSAGES_IMPORTANCE_HIGH_V2 = "zgotify_messages_high_importance_v2"
     }
 
     object ID {
